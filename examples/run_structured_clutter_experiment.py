@@ -1,12 +1,19 @@
 """Run the minimal structured-clutter comparison experiment.
 
-This produces one CSV-like table on stdout. It is deliberately small enough to
-serve as a smoke test and as the seed for the first paper-facing benchmark.
+This prints raw per-seed rows followed by a cross-seed summary table. It is
+small enough to serve as a smoke test and as the seed for the first paper-facing
+benchmark.
 """
 
 from __future__ import annotations
 
-from robust_clutter_dp import ExperimentConfig, run_structured_clutter_comparison
+from robust_clutter_dp import (
+    ExperimentConfig,
+    aggregate_method_results,
+    format_method_aggregates_csv,
+    format_method_results_csv,
+    run_structured_clutter_comparison,
+)
 
 
 def main() -> None:
@@ -14,12 +21,13 @@ def main() -> None:
         seeds=range(5),
         experiment_config=ExperimentConfig(methods=("uniform", "grid", "dp", "oracle")),
     )
-    rows = [result.to_dict() for result in results]
-    columns = list(rows[0])
+    aggregates = aggregate_method_results(results)
 
-    print(",".join(columns))
-    for row in rows:
-        print(",".join(str(row[column]) for column in columns))
+    print("# raw per-seed results")
+    print(format_method_results_csv(results))
+    print()
+    print("# cross-seed method summary")
+    print(format_method_aggregates_csv(aggregates))
 
 
 if __name__ == "__main__":
