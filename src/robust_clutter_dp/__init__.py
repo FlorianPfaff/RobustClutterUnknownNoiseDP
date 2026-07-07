@@ -25,6 +25,12 @@ from .metrics import (
     confirmation_metrics,
     gospa_decomposition,
 )
+from .reporting import (
+    MethodAggregate,
+    aggregate_method_results,
+    format_method_aggregates_csv,
+    format_method_results_csv,
+)
 from .scoring import (
     AssociationResult,
     BirthModel,
@@ -69,6 +75,7 @@ __all__ = [
     "GridClutterIntensity",
     "LinearTarget",
     "MeasurementModel",
+    "MethodAggregate",
     "MethodResult",
     "OnlineDPGaussianClutterIntensity",
     "PointObject",
@@ -84,11 +91,14 @@ __all__ = [
     "TrackletManagerConfig",
     "TrackletStepSummary",
     "UniformClutterIntensity",
+    "aggregate_method_results",
     "birth_vs_clutter_log_bayes_factor",
     "build_clutter_model",
     "compete_measurement",
     "confirmation_metrics",
     "estimate_bayesian_fdr",
+    "format_method_aggregates_csv",
+    "format_method_results_csv",
     "gaussian_logpdf",
     "gospa_decomposition",
     "posterior_existence_from_log_bayes_factor",
