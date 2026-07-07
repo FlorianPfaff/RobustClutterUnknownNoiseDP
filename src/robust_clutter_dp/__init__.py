@@ -8,6 +8,7 @@ from .confirmation import (
     posterior_existence_from_log_bayes_factor,
     select_by_bayesian_fdr,
 )
+from .dp_clutter import DPGaussianComponent, OnlineDPGaussianClutterIntensity
 from .scoring import (
     AssociationResult,
     BirthModel,
@@ -23,8 +24,10 @@ __all__ = [
     "BirthModel",
     "CandidateBirth",
     "ConfirmationDecision",
+    "DPGaussianComponent",
     "GridClutterIntensity",
     "MeasurementModel",
+    "OnlineDPGaussianClutterIntensity",
     "TrackPrediction",
     "UniformClutterIntensity",
     "compete_measurement",
