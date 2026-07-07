@@ -27,7 +27,7 @@ The package currently provides:
 - Bayesian false-discovery-rate control for confirming tentative births;
 - false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics;
 - a minimal uniform/grid/DP/oracle structured-clutter comparison experiment;
-- reporting helpers for raw per-seed CSV rows, cross-seed scenario/method summaries, and deltas versus oracle clutter;
+- reporting helpers for raw per-seed CSV rows, cross-seed scenario/method summaries, aggregate oracle deltas, and paired seed-wise oracle deltas;
 - a console entry point for reproducible benchmark runs.
 
 ## Install for development
@@ -113,6 +113,8 @@ robust-clutter-dp-experiment \
   --output all
 ```
 
+Use `--output paired-comparison` to print only paired seed-wise deltas against the reference method.
+
 Or run the convenience wrapper:
 
 ```bash
@@ -126,8 +128,10 @@ from robust_clutter_dp import (
     ExperimentConfig,
     aggregate_method_results,
     compare_to_reference,
+    compare_to_reference_paired,
     format_method_aggregates_csv,
     format_method_comparisons_csv,
+    format_paired_method_comparisons_csv,
     run_named_scenarios_comparison,
 )
 
@@ -138,9 +142,11 @@ results = run_named_scenarios_comparison(
 )
 aggregates = aggregate_method_results(results)
 comparisons = compare_to_reference(aggregates, reference_method="oracle")
+paired_comparisons = compare_to_reference_paired(results, reference_method="oracle")
 
 print(format_method_aggregates_csv(aggregates))
 print(format_method_comparisons_csv(comparisons))
+print(format_paired_method_comparisons_csv(paired_comparisons))
 ```
 
 ## Evaluation helper example
