@@ -20,6 +20,7 @@ class TentativeTracklet:
     first_scan: int
     last_scan: int
     measurements: tuple[NDArray[np.float64], ...]
+    scan_indices: tuple[int, ...]
     source_ids: tuple[str | None, ...]
     log_bayes_factor: float
     existence_probability: float
@@ -29,14 +30,26 @@ class TentativeTracklet:
             raise ValueError("tracklet must contain at least one measurement")
         if len(self.measurements) != len(self.source_ids):
             raise ValueError("measurements and source_ids must have the same length")
+        if len(self.measurements) != len(self.scan_indices):
+            raise ValueError("measurements and scan_indices must have the same length")
         if self.first_scan > self.last_scan:
             raise ValueError("first_scan must not exceed last_scan")
+        if min(self.scan_indices) != self.first_scan or max(self.scan_indices) != self.last_scan:
+            raise ValueError("first_scan and last_scan must agree with scan_indices")
+        if any(scan_index < 0 for scan_index in self.scan_indices):
+            raise ValueError("scan_indices must be non-negative")
         if not 0.0 <= self.existence_probability <= 1.0:
             raise ValueError("existence_probability must be in [0, 1]")
 
     @property
     def num_measurements(self) -> int:
         return len(self.measurements)
+
+    @property
+    def num_observation_scans(self) -> int:
+        """Number of distinct scans that contributed measurements."""
+
+        return len(set(self.scan_indices))
 
     @property
     def last_position(self) -> NDArray[np.float64]:
@@ -176,7 +189,14 @@ class TentativeBirthManager:
 
             candidate_id = self._nearest_active_candidate(z, scan_index)
             if candidate_id is None:
-                self._active[self._new_candidate_id()] = self._create_tracklet(scan_index, z, result, source_id)
+                candidate_id = self._new_candidate_id()
+                self._active[candidate_id] = self._create_tracklet(
+                    candidate_id,
+                    scan_index,
+                    z,
+                    result,
+                    source_id,
+                )
                 created += 1
             else:
                 self._active[candidate_id] = self._update_tracklet(
@@ -230,7 +250,7 @@ class TentativeBirthManager:
 
     def _is_eligible(self, tracklet: TentativeTracklet) -> bool:
         return (
-            tracklet.num_measurements >= self.config.min_updates_for_confirmation
+            tracklet.num_observation_scans >= self.config.min_updates_for_confirmation
             and tracklet.motion_span >= self.config.min_motion_span_for_confirmation
         )
 
@@ -238,6 +258,10 @@ class TentativeBirthManager:
         best_id: str | None = None
         best_distance = self.config.association_distance
         for candidate_id, tracklet in self._active.items():
+            if tracklet.last_scan == scan_index:
+                # A point-target birth candidate can receive at most one
+                # measurement per scan in this simplified manager.
+                continue
             if scan_index - tracklet.last_scan > self.config.max_missed_scans + 1:
                 continue
             distance = float(np.linalg.norm(measurement - tracklet.predicted_position()))
@@ -248,6 +272,7 @@ class TentativeBirthManager:
 
     def _create_tracklet(
         self,
+        candidate_id: str,
         scan_index: int,
         measurement: NDArray[np.float64],
         result: AssociationResult,
@@ -255,10 +280,11 @@ class TentativeBirthManager:
     ) -> TentativeTracklet:
         log_bayes_factor = birth_vs_clutter_log_bayes_factor(result)
         return TentativeTracklet(
-            candidate_id=f"birth-{self._next_id - 1}",
+            candidate_id=candidate_id,
             first_scan=scan_index,
             last_scan=scan_index,
             measurements=(measurement,),
+            scan_indices=(scan_index,),
             source_ids=(source_id,),
             log_bayes_factor=log_bayes_factor,
             existence_probability=posterior_existence_from_log_bayes_factor(
@@ -284,6 +310,7 @@ class TentativeBirthManager:
             first_scan=tracklet.first_scan,
             last_scan=scan_index,
             measurements=tracklet.measurements + (measurement,),
+            scan_indices=tracklet.scan_indices + (scan_index,),
             source_ids=tracklet.source_ids + (source_id,),
             log_bayes_factor=log_bayes_factor,
             existence_probability=posterior_existence_from_log_bayes_factor(
