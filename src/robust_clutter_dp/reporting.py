@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from statistics import mean
+from math import sqrt
+from statistics import mean, stdev
 from typing import Iterable, Sequence
 
 from .experiment import MethodResult
@@ -80,6 +81,52 @@ class MethodComparison:
             "delta_mean_gospa_distance": self.delta_mean_gospa_distance,
             "delta_mean_gospa_false_cost": self.delta_mean_gospa_false_cost,
             "delta_mean_gospa_missed_cost": self.delta_mean_gospa_missed_cost,
+        }
+
+
+@dataclass(frozen=True)
+class PairedMethodComparison:
+    """Paired seed-wise deltas between one method and a reference method.
+
+    Pairing by ``(scenario, seed)`` reduces Monte Carlo noise relative to
+    subtracting aggregate means from independently summarized rows.
+    """
+
+    scenario: str
+    method: str
+    reference_method: str
+    num_pairs: int
+    mean_delta_false_tracks: float
+    se_delta_false_tracks: float
+    mean_delta_false_track_duration: float
+    se_delta_false_track_duration: float
+    mean_delta_missed_targets: float
+    se_delta_missed_targets: float
+    mean_delta_gospa_distance: float
+    se_delta_gospa_distance: float
+    mean_delta_gospa_false_cost: float
+    se_delta_gospa_false_cost: float
+    mean_delta_gospa_missed_cost: float
+    se_delta_gospa_missed_cost: float
+
+    def to_dict(self) -> dict[str, float | int | str]:
+        return {
+            "scenario": self.scenario,
+            "method": self.method,
+            "reference_method": self.reference_method,
+            "num_pairs": self.num_pairs,
+            "mean_delta_false_tracks": self.mean_delta_false_tracks,
+            "se_delta_false_tracks": self.se_delta_false_tracks,
+            "mean_delta_false_track_duration": self.mean_delta_false_track_duration,
+            "se_delta_false_track_duration": self.se_delta_false_track_duration,
+            "mean_delta_missed_targets": self.mean_delta_missed_targets,
+            "se_delta_missed_targets": self.se_delta_missed_targets,
+            "mean_delta_gospa_distance": self.mean_delta_gospa_distance,
+            "se_delta_gospa_distance": self.se_delta_gospa_distance,
+            "mean_delta_gospa_false_cost": self.mean_delta_gospa_false_cost,
+            "se_delta_gospa_false_cost": self.se_delta_gospa_false_cost,
+            "mean_delta_gospa_missed_cost": self.mean_delta_gospa_missed_cost,
+            "se_delta_gospa_missed_cost": self.se_delta_gospa_missed_cost,
         }
 
 
@@ -160,6 +207,63 @@ def compare_to_reference(
     return tuple(comparisons)
 
 
+def compare_to_reference_paired(
+    results: Sequence[MethodResult],
+    reference_method: str = "oracle",
+) -> tuple[PairedMethodComparison, ...]:
+    """Compute paired seed-wise method deltas against a reference method.
+
+    Only seeds for which both the method and reference method are present in the
+    same scenario are used. Positive deltas mean higher error than the reference.
+    """
+
+    by_key = {(result.scenario, result.method, result.seed): result for result in results}
+    groups = sorted({(result.scenario, result.method) for result in results if result.method != reference_method})
+
+    comparisons: list[PairedMethodComparison] = []
+    for scenario, method in groups:
+        method_rows = sorted(
+            (result for result in results if result.scenario == scenario and result.method == method),
+            key=lambda result: result.seed,
+        )
+        pairs = [
+            (row, by_key[(scenario, reference_method, row.seed)])
+            for row in method_rows
+            if (scenario, reference_method, row.seed) in by_key
+        ]
+        if not pairs:
+            continue
+
+        false_tracks = [row.false_tracks - reference.false_tracks for row, reference in pairs]
+        false_duration = [row.false_track_duration - reference.false_track_duration for row, reference in pairs]
+        missed_targets = [row.missed_targets - reference.missed_targets for row, reference in pairs]
+        gospa_distance = [row.gospa_distance - reference.gospa_distance for row, reference in pairs]
+        gospa_false = [row.gospa_false_cost - reference.gospa_false_cost for row, reference in pairs]
+        gospa_missed = [row.gospa_missed_cost - reference.gospa_missed_cost for row, reference in pairs]
+
+        comparisons.append(
+            PairedMethodComparison(
+                scenario=scenario,
+                method=method,
+                reference_method=reference_method,
+                num_pairs=len(pairs),
+                mean_delta_false_tracks=_mean(false_tracks),
+                se_delta_false_tracks=_standard_error(false_tracks),
+                mean_delta_false_track_duration=_mean(false_duration),
+                se_delta_false_track_duration=_standard_error(false_duration),
+                mean_delta_missed_targets=_mean(missed_targets),
+                se_delta_missed_targets=_standard_error(missed_targets),
+                mean_delta_gospa_distance=_mean(gospa_distance),
+                se_delta_gospa_distance=_standard_error(gospa_distance),
+                mean_delta_gospa_false_cost=_mean(gospa_false),
+                se_delta_gospa_false_cost=_standard_error(gospa_false),
+                mean_delta_gospa_missed_cost=_mean(gospa_missed),
+                se_delta_gospa_missed_cost=_standard_error(gospa_missed),
+            )
+        )
+    return tuple(comparisons)
+
+
 def format_csv(rows: Iterable[dict[str, object]]) -> str:
     """Format dictionaries as a small CSV string without external dependencies."""
 
@@ -192,10 +296,30 @@ def format_method_comparisons_csv(comparisons: Sequence[MethodComparison]) -> st
     return format_csv(comparison.to_dict() for comparison in comparisons)
 
 
+def format_paired_method_comparisons_csv(comparisons: Sequence[PairedMethodComparison]) -> str:
+    """Format paired reference-comparison rows as CSV."""
+
+    return format_csv(comparison.to_dict() for comparison in comparisons)
+
+
 def _mean_attr(results: Sequence[MethodResult], attr: str) -> float:
     if not results:
         raise ValueError("cannot aggregate an empty result list")
-    return float(mean(float(getattr(result, attr)) for result in results))
+    return _mean(float(getattr(result, attr)) for result in results)
+
+
+def _mean(values: Iterable[float]) -> float:
+    materialized = tuple(float(value) for value in values)
+    if not materialized:
+        raise ValueError("cannot summarize an empty value list")
+    return float(mean(materialized))
+
+
+def _standard_error(values: Sequence[float]) -> float:
+    materialized = tuple(float(value) for value in values)
+    if len(materialized) < 2:
+        return 0.0
+    return float(stdev(materialized) / sqrt(len(materialized)))
 
 
 def _format_csv_cell(value: object) -> str:
