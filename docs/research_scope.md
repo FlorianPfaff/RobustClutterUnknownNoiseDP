@@ -36,6 +36,22 @@ Exclude from the first paper:
 - claims that the DP estimates target cardinality;
 - broad claims about unknown-noise filtering beyond the birth-vs-clutter decision.
 
+## Current benchmark scaffold
+
+The current codebase now has a deliberately small end-to-end benchmark path:
+
+```text
+structured-clutter simulator
+    -> clutter-only calibration samples
+    -> uniform/grid/DP/oracle clutter intensity
+    -> birth-vs-clutter measurement scoring
+    -> tentative-birth tracklet manager
+    -> posterior-FDR confirmation
+    -> GOSPA/FDR/false-track metrics
+```
+
+The simulator is not intended to be a final benchmark. Its purpose is to make the first paper claim executable early: does a learned spatial clutter intensity reduce false births in a persistent clutter hotspot compared with a uniform clutter model?
+
 ## Reviewer questions to answer experimentally
 
 ### Why not robust GLMB/PMBM?
@@ -45,6 +61,8 @@ The answer must be empirical and clutter-specific: a learned spatial clutter map
 ### What resolves identifiability?
 
 A persistent clutter hotspot and a stationary or slow target can be difficult to distinguish from position-only data. The experiments and discussion should make the discriminator explicit: target dynamics, track-level temporal consistency, amplitude/features if available, and the fact that the learned clutter intensity competes against birth rather than automatically suppressing all stationary objects.
+
+The current tentative-birth manager includes a minimal motion-span gate before confirmation. That gate is not a general solution to identifiability; it is a first diagnostic mechanism to avoid confirming several same-location clutter returns as a moving target in the toy benchmark.
 
 ## Metrics
 
