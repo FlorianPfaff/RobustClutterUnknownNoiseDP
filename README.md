@@ -25,7 +25,8 @@ The package currently provides:
 - posterior existence updates from target-vs-clutter Bayes factors;
 - Bayesian false-discovery-rate control for confirming tentative births;
 - false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics;
-- a minimal uniform/grid/DP/oracle structured-clutter comparison experiment.
+- a minimal uniform/grid/DP/oracle structured-clutter comparison experiment;
+- reporting helpers for raw per-seed CSV rows and cross-seed method summaries.
 
 ## Install for development
 
@@ -101,15 +102,20 @@ python examples/run_structured_clutter_experiment.py
 Or from Python:
 
 ```python
-from robust_clutter_dp import ExperimentConfig, run_structured_clutter_comparison
+from robust_clutter_dp import (
+    ExperimentConfig,
+    aggregate_method_results,
+    format_method_aggregates_csv,
+    run_structured_clutter_comparison,
+)
 
 results = run_structured_clutter_comparison(
     seeds=range(5),
     experiment_config=ExperimentConfig(methods=("uniform", "grid", "dp", "oracle")),
 )
+aggregates = aggregate_method_results(results)
 
-for result in results:
-    print(result.to_dict())
+print(format_method_aggregates_csv(aggregates))
 ```
 
 ## Evaluation helper example
