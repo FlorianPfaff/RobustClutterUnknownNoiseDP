@@ -41,16 +41,25 @@ Exclude from the first paper:
 The current codebase now has a deliberately small end-to-end benchmark path:
 
 ```text
-structured-clutter simulator
+named scenario preset
+    -> structured-clutter simulator
     -> clutter-only calibration samples
     -> uniform/grid/DP/oracle clutter intensity
     -> birth-vs-clutter measurement scoring
     -> tentative-birth tracklet manager
     -> posterior-FDR confirmation
     -> GOSPA/FDR/false-track metrics
+    -> cross-seed aggregate and oracle-regret tables
 ```
 
 The simulator is not intended to be a final benchmark. Its purpose is to make the first paper claim executable early: does a learned spatial clutter intensity reduce false births in a persistent clutter hotspot compared with a uniform clutter model?
+
+Current named scenarios are:
+
+- `hotspot`: the primary structured-clutter case;
+- `no_hotspot_control`: a spatially uniform-clutter control;
+- `two_hotspots`: a more clutter-structured multi-target case;
+- `near_hotspot_crossing`: an identifiability stress case where a target passes near a clutter hotspot.
 
 ## Reviewer questions to answer experimentally
 
@@ -74,7 +83,8 @@ Report metrics that expose false-track behavior:
 - time to confirm;
 - missed-target count;
 - track fragmentation;
-- posterior-existence calibration.
+- posterior-existence calibration;
+- deltas versus the oracle clutter model within each scenario.
 
 Localization RMSE alone is insufficient because a method can localize real targets well while producing too many false tracks.
 
