@@ -1,0 +1,128 @@
+name: benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenarios:
+        description: "Comma-separated scenario names or 'all'"
+        required: false
+        default: "all"
+      methods:
+        description: "Comma-separated methods"
+        required: false
+        default: "uniform,grid,dp,oracle"
+      seeds:
+        description: "Seed list or range, e.g. 0:100 or 0,3,7"
+        required: false
+        default: "0:100"
+      reference_method:
+        description: "Reference method for delta tables"
+        required: false
+        default: "oracle"
+  pull_request:
+    paths:
+      - ".github/workflows/benchmark.yml"
+      - "src/robust_clutter_dp/**"
+      - "examples/run_structured_clutter_experiment.py"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    name: structured-clutter benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      BENCHMARK_SCENARIOS: ${{ github.event.inputs.scenarios || 'hotspot,near_hotspot_crossing' }}
+      BENCHMARK_METHODS: ${{ github.event.inputs.methods || 'uniform,grid,dp,oracle' }}
+      BENCHMARK_SEEDS: ${{ github.event.inputs.seeds || '0:3' }}
+      BENCHMARK_REFERENCE_METHOD: ${{ github.event.inputs.reference_method || 'oracle' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package
+        run: python -m pip install -e .[test]
+
+      - name: Run structured-clutter benchmark
+        run: |
+          mkdir -p benchmark-results
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          from robust_clutter_dp import (
+              ExperimentConfig,
+              aggregate_method_results,
+              compare_to_reference,
+              compare_to_reference_paired,
+              format_method_aggregates_csv,
+              format_method_comparisons_csv,
+              format_method_results_csv,
+              format_paired_method_comparisons_csv,
+              run_named_scenarios_comparison,
+          )
+          from robust_clutter_dp.cli import parse_method_spec, parse_scenario_spec, parse_seed_spec
+
+          out = Path("benchmark-results")
+          scenarios = parse_scenario_spec(os.environ["BENCHMARK_SCENARIOS"])
+          methods = parse_method_spec(os.environ["BENCHMARK_METHODS"])
+          seeds = parse_seed_spec(os.environ["BENCHMARK_SEEDS"])
+          reference = os.environ["BENCHMARK_REFERENCE_METHOD"]
+
+          results = run_named_scenarios_comparison(
+              scenario_names=scenarios,
+              seeds=seeds,
+              experiment_config=ExperimentConfig(methods=methods),
+          )
+          aggregates = aggregate_method_results(results)
+          comparisons = compare_to_reference(aggregates, reference_method=reference)
+          paired = compare_to_reference_paired(results, reference_method=reference)
+
+          (out / "raw_results.csv").write_text(format_method_results_csv(results) + "\n", encoding="utf-8")
+          (out / "summary_by_scenario_method.csv").write_text(
+              format_method_aggregates_csv(aggregates) + "\n",
+              encoding="utf-8",
+          )
+          (out / "deltas_vs_reference.csv").write_text(
+              format_method_comparisons_csv(comparisons) + "\n",
+              encoding="utf-8",
+          )
+          (out / "paired_deltas_vs_reference.csv").write_text(
+              format_paired_method_comparisons_csv(paired) + "\n",
+              encoding="utf-8",
+          )
+          (out / "manifest.txt").write_text(
+              "\n".join(
+                  [
+                      f"scenarios={','.join(scenarios)}",
+                      f"methods={','.join(methods)}",
+                      f"seeds={','.join(str(seed) for seed in seeds)}",
+                      f"reference_method={reference}",
+                      f"num_rows={len(results)}",
+                  ]
+              )
+              + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Print benchmark summary
+        run: |
+          cat benchmark-results/manifest.txt
+          echo
+          cat benchmark-results/summary_by_scenario_method.csv
+          echo
+          cat benchmark-results/paired_deltas_vs_reference.csv
+
+      - name: Upload benchmark CSV artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: structured-clutter-benchmark-${{ github.run_id }}
+          path: benchmark-results/
+          if-no-files-found: error
