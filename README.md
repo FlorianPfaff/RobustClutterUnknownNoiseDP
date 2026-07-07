@@ -18,6 +18,7 @@ The package currently provides:
 
 - explicit birth-vs-clutter association weights;
 - uniform, grid-based, online DP-style Gaussian-mixture, and oracle structured-clutter intensities;
+- named structured-clutter scenario presets, including control and identifiability-stress cases;
 - a small structured-clutter simulator with clutter-only calibration samples;
 - a tentative-birth tracklet manager with sequential Bayes-factor updates and FDR confirmation;
 - Gaussian predictive likelihoods as the default model;
@@ -26,7 +27,7 @@ The package currently provides:
 - Bayesian false-discovery-rate control for confirming tentative births;
 - false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics;
 - a minimal uniform/grid/DP/oracle structured-clutter comparison experiment;
-- reporting helpers for raw per-seed CSV rows and cross-seed method summaries.
+- reporting helpers for raw per-seed CSV rows, cross-seed scenario/method summaries, and deltas versus oracle clutter.
 
 ## Install for development
 
@@ -105,17 +106,22 @@ Or from Python:
 from robust_clutter_dp import (
     ExperimentConfig,
     aggregate_method_results,
+    compare_to_reference,
     format_method_aggregates_csv,
-    run_structured_clutter_comparison,
+    format_method_comparisons_csv,
+    run_named_scenarios_comparison,
 )
 
-results = run_structured_clutter_comparison(
+results = run_named_scenarios_comparison(
+    scenario_names=("hotspot", "no_hotspot_control", "near_hotspot_crossing"),
     seeds=range(5),
     experiment_config=ExperimentConfig(methods=("uniform", "grid", "dp", "oracle")),
 )
 aggregates = aggregate_method_results(results)
+comparisons = compare_to_reference(aggregates, reference_method="oracle")
 
 print(format_method_aggregates_csv(aggregates))
+print(format_method_comparisons_csv(comparisons))
 ```
 
 ## Evaluation helper example
