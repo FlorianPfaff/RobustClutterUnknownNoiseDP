@@ -15,12 +15,13 @@ def _result(
     gospa_false_cost: float,
     scenario: str = "hotspot",
 ) -> MethodResult:
+    confirmed_tracks = max(2, false_tracks)
     return MethodResult(
         scenario=scenario,
         method=method,
         seed=seed,
-        confirmed_tracks=2,
-        true_confirmed_tracks=2 - false_tracks,
+        confirmed_tracks=confirmed_tracks,
+        true_confirmed_tracks=confirmed_tracks - false_tracks,
         false_tracks=false_tracks,
         false_track_duration=false_tracks * 3,
         mean_time_to_confirm=3.0,
