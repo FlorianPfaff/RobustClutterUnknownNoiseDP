@@ -48,8 +48,34 @@ def test_tentative_birth_manager_confirms_consistent_sequence():
     assert len(manager.confirmed_tracklets) == 1
     confirmed = manager.confirmed_tracklets[0]
     assert confirmed.num_measurements == 3
+    assert confirmed.num_observation_scans == 3
     assert confirmed.dominant_source_id == "target-1"
     assert confirmed.existence_probability > 0.9
+
+
+def test_tentative_birth_manager_does_not_confirm_multiple_same_scan_points_as_sequence():
+    manager = TentativeBirthManager(
+        TrackletManagerConfig(
+            prior_existence=0.10,
+            birth_probability_threshold=0.20,
+            association_distance=0.75,
+            min_updates_for_confirmation=3,
+            min_motion_span_for_confirmation=0.0,
+            min_confirmation_probability=0.0,
+            fdr_q=0.50,
+        )
+    )
+
+    manager.process_measurements(
+        scan_index=0,
+        measurements=[np.array([0.0, 0.0]), np.array([0.1, 0.0]), np.array([0.2, 0.0])],
+        association_results=[_association_result(0.0, -4.0)] * 3,
+        source_ids=[None, None, None],
+    )
+
+    assert len(manager.active_tracklets) == 3
+    assert manager.confirmed_tracklets == ()
+    assert all(tracklet.num_observation_scans == 1 for tracklet in manager.active_tracklets)
 
 
 def test_tentative_birth_manager_ignores_clutter_dominated_measurements():
