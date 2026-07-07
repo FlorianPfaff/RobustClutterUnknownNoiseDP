@@ -11,8 +11,9 @@ from .experiment import MethodResult
 
 @dataclass(frozen=True)
 class MethodAggregate:
-    """Cross-seed aggregate for one clutter-model method."""
+    """Cross-seed aggregate for one scenario/method pair."""
 
+    scenario: str
     method: str
     num_runs: int
     mean_confirmed_tracks: float
@@ -34,6 +35,7 @@ class MethodAggregate:
         """Return a CSV/dataframe-friendly representation."""
 
         return {
+            "scenario": self.scenario,
             "method": self.method,
             "num_runs": self.num_runs,
             "mean_confirmed_tracks": self.mean_confirmed_tracks,
@@ -53,21 +55,50 @@ class MethodAggregate:
         }
 
 
-def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAggregate, ...]:
-    """Aggregate method results across seeds.
+@dataclass(frozen=True)
+class MethodComparison:
+    """Difference between one method aggregate and a reference aggregate."""
 
-    The output is sorted alphabetically by method for deterministic reporting.
+    scenario: str
+    method: str
+    reference_method: str
+    delta_mean_false_tracks: float
+    delta_mean_false_track_duration: float
+    delta_mean_missed_targets: float
+    delta_mean_gospa_distance: float
+    delta_mean_gospa_false_cost: float
+    delta_mean_gospa_missed_cost: float
+
+    def to_dict(self) -> dict[str, float | str]:
+        return {
+            "scenario": self.scenario,
+            "method": self.method,
+            "reference_method": self.reference_method,
+            "delta_mean_false_tracks": self.delta_mean_false_tracks,
+            "delta_mean_false_track_duration": self.delta_mean_false_track_duration,
+            "delta_mean_missed_targets": self.delta_mean_missed_targets,
+            "delta_mean_gospa_distance": self.delta_mean_gospa_distance,
+            "delta_mean_gospa_false_cost": self.delta_mean_gospa_false_cost,
+            "delta_mean_gospa_missed_cost": self.delta_mean_gospa_missed_cost,
+        }
+
+
+def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAggregate, ...]:
+    """Aggregate method results across seeds by scenario and method.
+
+    The output is sorted by scenario and method for deterministic reporting.
     """
 
-    by_method: dict[str, list[MethodResult]] = {}
+    by_group: dict[tuple[str, str], list[MethodResult]] = {}
     for result in results:
-        by_method.setdefault(result.method, []).append(result)
+        by_group.setdefault((result.scenario, result.method), []).append(result)
 
     aggregates: list[MethodAggregate] = []
-    for method in sorted(by_method):
-        method_results = by_method[method]
+    for scenario, method in sorted(by_group):
+        method_results = by_group[(scenario, method)]
         aggregates.append(
             MethodAggregate(
+                scenario=scenario,
                 method=method,
                 num_runs=len(method_results),
                 mean_confirmed_tracks=_mean_attr(method_results, "confirmed_tracks"),
@@ -90,6 +121,43 @@ def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAgg
             )
         )
     return tuple(aggregates)
+
+
+def compare_to_reference(
+    aggregates: Sequence[MethodAggregate],
+    reference_method: str = "oracle",
+) -> tuple[MethodComparison, ...]:
+    """Compare method aggregates against a reference method within each scenario.
+
+    Positive deltas mean the method is worse than the reference on that metric;
+    negative deltas mean lower error than the reference. The reference row itself
+    is omitted from the returned comparisons.
+    """
+
+    by_scenario_method = {(aggregate.scenario, aggregate.method): aggregate for aggregate in aggregates}
+    comparisons: list[MethodComparison] = []
+    for aggregate in aggregates:
+        if aggregate.method == reference_method:
+            continue
+        reference = by_scenario_method.get((aggregate.scenario, reference_method))
+        if reference is None:
+            continue
+        comparisons.append(
+            MethodComparison(
+                scenario=aggregate.scenario,
+                method=aggregate.method,
+                reference_method=reference_method,
+                delta_mean_false_tracks=aggregate.mean_false_tracks - reference.mean_false_tracks,
+                delta_mean_false_track_duration=(
+                    aggregate.mean_false_track_duration - reference.mean_false_track_duration
+                ),
+                delta_mean_missed_targets=aggregate.mean_missed_targets - reference.mean_missed_targets,
+                delta_mean_gospa_distance=aggregate.mean_gospa_distance - reference.mean_gospa_distance,
+                delta_mean_gospa_false_cost=aggregate.mean_gospa_false_cost - reference.mean_gospa_false_cost,
+                delta_mean_gospa_missed_cost=aggregate.mean_gospa_missed_cost - reference.mean_gospa_missed_cost,
+            )
+        )
+    return tuple(comparisons)
 
 
 def format_csv(rows: Iterable[dict[str, object]]) -> str:
@@ -116,6 +184,12 @@ def format_method_aggregates_csv(aggregates: Sequence[MethodAggregate]) -> str:
     """Format cross-seed aggregates as CSV."""
 
     return format_csv(aggregate.to_dict() for aggregate in aggregates)
+
+
+def format_method_comparisons_csv(comparisons: Sequence[MethodComparison]) -> str:
+    """Format reference-comparison rows as CSV."""
+
+    return format_csv(comparison.to_dict() for comparison in comparisons)
 
 
 def _mean_attr(results: Sequence[MethodResult], attr: str) -> float:
