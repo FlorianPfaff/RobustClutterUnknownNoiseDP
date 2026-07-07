@@ -8,7 +8,6 @@ from typing import Sequence
 import numpy as np
 
 from .clutter import GridClutterIntensity, UniformClutterIntensity
-from .confirmation import CandidateBirth
 from .dp_clutter import OnlineDPGaussianClutterIntensity
 from .metrics import ConfirmationRecord, PointObject, confirmation_metrics, gospa_decomposition
 from .scoring import BirthModel, MeasurementModel, compete_measurement
@@ -72,6 +71,8 @@ class MethodResult:
     true_confirmed_tracks: int
     false_tracks: int
     false_track_duration: int
+    mean_time_to_confirm: float
+    mean_true_time_to_confirm: float
     missed_targets: int
     gospa_distance: float
     gospa_total_cost: float
@@ -92,6 +93,8 @@ class MethodResult:
             "true_confirmed_tracks": self.true_confirmed_tracks,
             "false_tracks": self.false_tracks,
             "false_track_duration": self.false_track_duration,
+            "mean_time_to_confirm": self.mean_time_to_confirm,
+            "mean_true_time_to_confirm": self.mean_true_time_to_confirm,
             "missed_targets": self.missed_targets,
             "gospa_distance": self.gospa_distance,
             "gospa_total_cost": self.gospa_total_cost,
@@ -245,14 +248,17 @@ def summarize_method_result(
     ]
     gospa = gospa_decomposition(estimates, truths, cutoff=gospa_cutoff)
 
+    true_tracklets = [tracklet for tracklet in confirmed if truth_labels[tracklet.candidate_id]]
     false_tracklets = [tracklet for tracklet in confirmed if not truth_labels[tracklet.candidate_id]]
     return MethodResult(
         method=method,
         seed=seed,
         confirmed_tracks=len(confirmed),
-        true_confirmed_tracks=sum(truth_labels.values()),
+        true_confirmed_tracks=len(true_tracklets),
         false_tracks=len(false_tracklets),
         false_track_duration=sum(tracklet.duration for tracklet in false_tracklets),
+        mean_time_to_confirm=_mean_duration(confirmed),
+        mean_true_time_to_confirm=_mean_duration(true_tracklets),
         missed_targets=gospa.num_missed,
         gospa_distance=gospa.distance,
         gospa_total_cost=gospa.total_cost,
@@ -269,3 +275,9 @@ def _nonempty_calibration(run: SimulationRun) -> np.ndarray:
     if run.calibration_measurements.size == 0:
         return np.array([run.config.center], dtype=float)
     return run.calibration_measurements
+
+
+def _mean_duration(tracklets: Sequence[TentativeTracklet]) -> float:
+    if not tracklets:
+        return 0.0
+    return float(sum(tracklet.duration for tracklet in tracklets) / len(tracklets))
