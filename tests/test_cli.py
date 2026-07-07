@@ -83,6 +83,28 @@ def test_run_cli_outputs_requested_summary_table():
     assert "hotspot,oracle" in output
 
 
+def test_run_cli_outputs_paired_comparison_table():
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "--scenarios",
+            "hotspot",
+            "--methods",
+            "uniform,oracle",
+            "--seeds",
+            "0:2",
+            "--output",
+            "paired-comparison",
+        ]
+    )
+
+    output = run_cli(args)
+
+    assert "# paired deltas versus reference clutter model" in output
+    assert "scenario,method,reference_method,num_pairs" in output
+    assert "se_delta_false_tracks" in output
+
+
 def test_main_returns_zero_for_valid_small_run(capsys):
     exit_code = main(
         [
