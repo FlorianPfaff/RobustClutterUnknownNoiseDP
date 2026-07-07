@@ -14,6 +14,7 @@ from .experiment import (
     MethodResult,
     build_clutter_model,
     run_method,
+    run_named_scenarios_comparison,
     run_structured_clutter_comparison,
 )
 from .metrics import (
@@ -27,9 +28,20 @@ from .metrics import (
 )
 from .reporting import (
     MethodAggregate,
+    MethodComparison,
     aggregate_method_results,
+    compare_to_reference,
     format_method_aggregates_csv,
+    format_method_comparisons_csv,
     format_method_results_csv,
+)
+from .scenarios import (
+    SCENARIO_NAMES,
+    hotspot_scenario,
+    make_scenario,
+    near_hotspot_crossing_scenario,
+    no_hotspot_control_scenario,
+    two_hotspots_scenario,
 )
 from .scoring import (
     AssociationResult,
@@ -76,9 +88,11 @@ __all__ = [
     "LinearTarget",
     "MeasurementModel",
     "MethodAggregate",
+    "MethodComparison",
     "MethodResult",
     "OnlineDPGaussianClutterIntensity",
     "PointObject",
+    "SCENARIO_NAMES",
     "SimulatedMeasurement",
     "SimulatedTruth",
     "SimulationConfig",
@@ -94,18 +108,26 @@ __all__ = [
     "aggregate_method_results",
     "birth_vs_clutter_log_bayes_factor",
     "build_clutter_model",
+    "compare_to_reference",
     "compete_measurement",
     "confirmation_metrics",
     "estimate_bayesian_fdr",
     "format_method_aggregates_csv",
+    "format_method_comparisons_csv",
     "format_method_results_csv",
     "gaussian_logpdf",
     "gospa_decomposition",
+    "hotspot_scenario",
+    "make_scenario",
+    "near_hotspot_crossing_scenario",
+    "no_hotspot_control_scenario",
     "posterior_existence_from_log_bayes_factor",
     "run_method",
+    "run_named_scenarios_comparison",
     "run_structured_clutter_comparison",
     "select_by_bayesian_fdr",
     "simulate_structured_clutter_scene",
     "student_t_logpdf",
     "tracklet_truth_labels",
+    "two_hotspots_scenario",
 ]
