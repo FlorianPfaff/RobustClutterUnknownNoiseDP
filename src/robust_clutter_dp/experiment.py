@@ -10,6 +10,7 @@ import numpy as np
 from .clutter import GridClutterIntensity, UniformClutterIntensity
 from .dp_clutter import OnlineDPGaussianClutterIntensity
 from .metrics import ConfirmationRecord, PointObject, confirmation_metrics, gospa_decomposition
+from .scenarios import make_scenario
 from .scoring import BirthModel, MeasurementModel, compete_measurement
 from .simulation import SimulationConfig, SimulationRun, StructuredClutterIntensity, simulate_structured_clutter_scene
 from .tracklet import TentativeBirthManager, TentativeTracklet, TrackletManagerConfig, tracklet_truth_labels
@@ -63,8 +64,9 @@ class ExperimentConfig:
 
 @dataclass(frozen=True)
 class MethodResult:
-    """One method/seed result row."""
+    """One method/scenario/seed result row."""
 
+    scenario: str
     method: str
     seed: int
     confirmed_tracks: int
@@ -87,6 +89,7 @@ class MethodResult:
         """Return a CSV/dataframe-friendly representation."""
 
         return {
+            "scenario": self.scenario,
             "method": self.method,
             "seed": self.seed,
             "confirmed_tracks": self.confirmed_tracks,
@@ -111,6 +114,7 @@ def run_structured_clutter_comparison(
     seeds: Sequence[int] = (0,),
     simulation_config: SimulationConfig | None = None,
     experiment_config: ExperimentConfig | None = None,
+    scenario_name: str = "custom",
 ) -> tuple[MethodResult, ...]:
     """Run uniform/grid/DP/oracle clutter comparisons across seeds."""
 
@@ -121,7 +125,27 @@ def run_structured_clutter_comparison(
     for seed in seeds:
         run = simulate_structured_clutter_scene(sim_config, seed=seed)
         for method in exp_config.methods:
-            results.append(run_method(run, method, exp_config))
+            results.append(run_method(run, method, exp_config, scenario=scenario_name))
+    return tuple(results)
+
+
+def run_named_scenarios_comparison(
+    scenario_names: Sequence[str],
+    seeds: Sequence[int] = (0,),
+    experiment_config: ExperimentConfig | None = None,
+) -> tuple[MethodResult, ...]:
+    """Run a comparison across named scenario presets."""
+
+    results: list[MethodResult] = []
+    for scenario_name in scenario_names:
+        results.extend(
+            run_structured_clutter_comparison(
+                seeds=seeds,
+                simulation_config=make_scenario(scenario_name),
+                experiment_config=experiment_config,
+                scenario_name=scenario_name,
+            )
+        )
     return tuple(results)
 
 
@@ -129,6 +153,7 @@ def run_method(
     run: SimulationRun,
     method: str,
     experiment_config: ExperimentConfig | None = None,
+    scenario: str = "custom",
 ) -> MethodResult:
     """Run one clutter model through the tentative-birth pipeline."""
 
@@ -170,6 +195,7 @@ def run_method(
 
     manager.confirm_eligible()
     return summarize_method_result(
+        scenario=scenario,
         method=method,
         seed=run.seed,
         confirmed=manager.confirmed_tracklets,
@@ -218,6 +244,7 @@ def build_clutter_model(run: SimulationRun, method: str, config: ExperimentConfi
 
 
 def summarize_method_result(
+    scenario: str,
     method: str,
     seed: int,
     confirmed: Sequence[TentativeTracklet],
@@ -251,6 +278,7 @@ def summarize_method_result(
     true_tracklets = [tracklet for tracklet in confirmed if truth_labels[tracklet.candidate_id]]
     false_tracklets = [tracklet for tracklet in confirmed if not truth_labels[tracklet.candidate_id]]
     return MethodResult(
+        scenario=scenario,
         method=method,
         seed=seed,
         confirmed_tracks=len(confirmed),
