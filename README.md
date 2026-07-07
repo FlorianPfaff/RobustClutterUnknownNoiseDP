@@ -27,13 +27,20 @@ The package currently provides:
 - Bayesian false-discovery-rate control for confirming tentative births;
 - false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics;
 - a minimal uniform/grid/DP/oracle structured-clutter comparison experiment;
-- reporting helpers for raw per-seed CSV rows, cross-seed scenario/method summaries, and deltas versus oracle clutter.
+- reporting helpers for raw per-seed CSV rows, cross-seed scenario/method summaries, and deltas versus oracle clutter;
+- a console entry point for reproducible benchmark runs.
 
 ## Install for development
 
 ```bash
 python -m pip install -e .[test]
 pytest
+```
+
+The install exposes a benchmark command:
+
+```bash
+robust-clutter-dp-experiment --help
 ```
 
 ## Minimal scoring example
@@ -96,11 +103,23 @@ print(result.best_source)
 
 ## Structured-clutter comparison example
 
+Use the installed command:
+
+```bash
+robust-clutter-dp-experiment \
+  --scenarios hotspot,no_hotspot_control,near_hotspot_crossing \
+  --methods uniform,grid,dp,oracle \
+  --seeds 0:5 \
+  --output all
+```
+
+Or run the convenience wrapper:
+
 ```bash
 python examples/run_structured_clutter_experiment.py
 ```
 
-Or from Python:
+Or use the Python API:
 
 ```python
 from robust_clutter_dp import (
