@@ -10,14 +10,16 @@ from .experiment import ExperimentConfig, SUPPORTED_METHODS, run_named_scenarios
 from .reporting import (
     aggregate_method_results,
     compare_to_reference,
+    compare_to_reference_paired,
     format_method_aggregates_csv,
     format_method_comparisons_csv,
     format_method_results_csv,
+    format_paired_method_comparisons_csv,
 )
 from .scenarios import SCENARIO_NAMES
 
 
-OUTPUT_MODES = ("all", "raw", "summary", "comparison")
+OUTPUT_MODES = ("all", "raw", "summary", "comparison", "paired-comparison")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -155,7 +157,8 @@ def run_cli(args: argparse.Namespace) -> str:
         experiment_config=experiment_config,
     )
     aggregates = aggregate_method_results(results)
-    comparisons = compare_to_reference(aggregates, reference_method=args.reference_method)
+    aggregate_comparisons = compare_to_reference(aggregates, reference_method=args.reference_method)
+    paired_comparisons = compare_to_reference_paired(results, reference_method=args.reference_method)
 
     sections: list[str] = []
     if args.output in ("all", "raw"):
@@ -163,7 +166,16 @@ def run_cli(args: argparse.Namespace) -> str:
     if args.output in ("all", "summary"):
         sections.extend(["# cross-seed scenario/method summary", format_method_aggregates_csv(aggregates)])
     if args.output in ("all", "comparison"):
-        sections.extend(["# deltas versus reference clutter model", format_method_comparisons_csv(comparisons)])
+        sections.extend(
+            ["# deltas versus reference clutter model", format_method_comparisons_csv(aggregate_comparisons)]
+        )
+    if args.output in ("all", "paired-comparison"):
+        sections.extend(
+            [
+                "# paired deltas versus reference clutter model",
+                format_paired_method_comparisons_csv(paired_comparisons),
+            ]
+        )
     return "\n\n".join(section for section in sections if section)
 
 
