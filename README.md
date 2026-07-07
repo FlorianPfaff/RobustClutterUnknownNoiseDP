@@ -17,12 +17,15 @@ Candidate births should remain tentative until they beat the learned clutter exp
 The package currently provides:
 
 - explicit birth-vs-clutter association weights;
-- uniform, grid-based, and online DP-style Gaussian-mixture clutter intensities;
+- uniform, grid-based, online DP-style Gaussian-mixture, and oracle structured-clutter intensities;
+- a small structured-clutter simulator with clutter-only calibration samples;
+- a tentative-birth tracklet manager with sequential Bayes-factor updates and FDR confirmation;
 - Gaussian predictive likelihoods as the default model;
 - Student-t predictive likelihoods as an optional robustness ablation;
 - posterior existence updates from target-vs-clutter Bayes factors;
 - Bayesian false-discovery-rate control for confirming tentative births;
-- false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics.
+- false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics;
+- a minimal uniform/grid/DP/oracle structured-clutter comparison experiment.
 
 ## Install for development
 
@@ -31,7 +34,7 @@ python -m pip install -e .[test]
 pytest
 ```
 
-## Minimal example
+## Minimal scoring example
 
 ```python
 import numpy as np
@@ -87,6 +90,26 @@ result = compete_measurement(
 
 print(result.probabilities)
 print(result.best_source)
+```
+
+## Structured-clutter comparison example
+
+```bash
+python examples/run_structured_clutter_experiment.py
+```
+
+Or from Python:
+
+```python
+from robust_clutter_dp import ExperimentConfig, run_structured_clutter_comparison
+
+results = run_structured_clutter_comparison(
+    seeds=range(5),
+    experiment_config=ExperimentConfig(methods=("uniform", "grid", "dp", "oracle")),
+)
+
+for result in results:
+    print(result.to_dict())
 ```
 
 ## Evaluation helper example
