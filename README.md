@@ -21,7 +21,8 @@ The package currently provides:
 - Gaussian predictive likelihoods as the default model;
 - Student-t predictive likelihoods as an optional robustness ablation;
 - posterior existence updates from target-vs-clutter Bayes factors;
-- Bayesian false-discovery-rate control for confirming tentative births.
+- Bayesian false-discovery-rate control for confirming tentative births;
+- false-track-oriented evaluation helpers, including GOSPA-style decomposition and confirmation calibration/FDR diagnostics.
 
 ## Install for development
 
@@ -86,6 +87,21 @@ result = compete_measurement(
 
 print(result.probabilities)
 print(result.best_source)
+```
+
+## Evaluation helper example
+
+```python
+from robust_clutter_dp import PointObject, gospa_decomposition
+
+metrics = gospa_decomposition(
+    estimates=[PointObject("est-1", [0.1, 0.0]), PointObject("false", [10.0, 10.0])],
+    truths=[PointObject("truth-1", [0.0, 0.0])],
+    cutoff=2.0,
+)
+
+print(metrics.num_false)
+print(metrics.false_cost)
 ```
 
 ## Research scope
