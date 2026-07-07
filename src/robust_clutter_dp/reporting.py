@@ -19,6 +19,8 @@ class MethodAggregate:
     mean_true_confirmed_tracks: float
     mean_false_tracks: float
     mean_false_track_duration: float
+    mean_time_to_confirm: float
+    mean_true_time_to_confirm: float
     mean_missed_targets: float
     mean_gospa_distance: float
     mean_gospa_localization_cost: float
@@ -38,6 +40,8 @@ class MethodAggregate:
             "mean_true_confirmed_tracks": self.mean_true_confirmed_tracks,
             "mean_false_tracks": self.mean_false_tracks,
             "mean_false_track_duration": self.mean_false_track_duration,
+            "mean_time_to_confirm": self.mean_time_to_confirm,
+            "mean_true_time_to_confirm": self.mean_true_time_to_confirm,
             "mean_missed_targets": self.mean_missed_targets,
             "mean_gospa_distance": self.mean_gospa_distance,
             "mean_gospa_localization_cost": self.mean_gospa_localization_cost,
@@ -70,6 +74,8 @@ def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAgg
                 mean_true_confirmed_tracks=_mean_attr(method_results, "true_confirmed_tracks"),
                 mean_false_tracks=_mean_attr(method_results, "false_tracks"),
                 mean_false_track_duration=_mean_attr(method_results, "false_track_duration"),
+                mean_time_to_confirm=_mean_attr(method_results, "mean_time_to_confirm"),
+                mean_true_time_to_confirm=_mean_attr(method_results, "mean_true_time_to_confirm"),
                 mean_missed_targets=_mean_attr(method_results, "missed_targets"),
                 mean_gospa_distance=_mean_attr(method_results, "gospa_distance"),
                 mean_gospa_localization_cost=_mean_attr(method_results, "gospa_localization_cost"),
