@@ -21,6 +21,9 @@ class MethodAggregate:
     mean_true_confirmed_tracks: float
     mean_false_tracks: float
     mean_false_track_duration: float
+    mean_track_fragment_count: float
+    mean_fragments_per_confirmed_truth: float
+    mean_merged_estimates: float
     mean_time_to_confirm: float
     mean_true_time_to_confirm: float
     mean_missed_targets: float
@@ -28,6 +31,10 @@ class MethodAggregate:
     mean_gospa_localization_cost: float
     mean_gospa_missed_cost: float
     mean_gospa_false_cost: float
+    mean_merged_gospa_distance: float
+    mean_merged_gospa_localization_cost: float
+    mean_merged_gospa_missed_cost: float
+    mean_merged_gospa_false_cost: float
     mean_posterior_expected_fdr: float
     mean_observed_false_discovery_proportion: float
     mean_existence_brier_score: float
@@ -43,6 +50,9 @@ class MethodAggregate:
             "mean_true_confirmed_tracks": self.mean_true_confirmed_tracks,
             "mean_false_tracks": self.mean_false_tracks,
             "mean_false_track_duration": self.mean_false_track_duration,
+            "mean_track_fragment_count": self.mean_track_fragment_count,
+            "mean_fragments_per_confirmed_truth": self.mean_fragments_per_confirmed_truth,
+            "mean_merged_estimates": self.mean_merged_estimates,
             "mean_time_to_confirm": self.mean_time_to_confirm,
             "mean_true_time_to_confirm": self.mean_true_time_to_confirm,
             "mean_missed_targets": self.mean_missed_targets,
@@ -50,6 +60,10 @@ class MethodAggregate:
             "mean_gospa_localization_cost": self.mean_gospa_localization_cost,
             "mean_gospa_missed_cost": self.mean_gospa_missed_cost,
             "mean_gospa_false_cost": self.mean_gospa_false_cost,
+            "mean_merged_gospa_distance": self.mean_merged_gospa_distance,
+            "mean_merged_gospa_localization_cost": self.mean_merged_gospa_localization_cost,
+            "mean_merged_gospa_missed_cost": self.mean_merged_gospa_missed_cost,
+            "mean_merged_gospa_false_cost": self.mean_merged_gospa_false_cost,
             "mean_posterior_expected_fdr": self.mean_posterior_expected_fdr,
             "mean_observed_false_discovery_proportion": self.mean_observed_false_discovery_proportion,
             "mean_existence_brier_score": self.mean_existence_brier_score,
@@ -69,6 +83,9 @@ class MethodComparison:
     delta_mean_gospa_distance: float
     delta_mean_gospa_false_cost: float
     delta_mean_gospa_missed_cost: float
+    delta_mean_merged_gospa_distance: float
+    delta_mean_merged_gospa_false_cost: float
+    delta_mean_merged_gospa_missed_cost: float
 
     def to_dict(self) -> dict[str, float | str]:
         return {
@@ -81,16 +98,15 @@ class MethodComparison:
             "delta_mean_gospa_distance": self.delta_mean_gospa_distance,
             "delta_mean_gospa_false_cost": self.delta_mean_gospa_false_cost,
             "delta_mean_gospa_missed_cost": self.delta_mean_gospa_missed_cost,
+            "delta_mean_merged_gospa_distance": self.delta_mean_merged_gospa_distance,
+            "delta_mean_merged_gospa_false_cost": self.delta_mean_merged_gospa_false_cost,
+            "delta_mean_merged_gospa_missed_cost": self.delta_mean_merged_gospa_missed_cost,
         }
 
 
 @dataclass(frozen=True)
 class PairedMethodComparison:
-    """Paired seed-wise deltas between one method and a reference method.
-
-    Pairing by ``(scenario, seed)`` reduces Monte Carlo noise relative to
-    subtracting aggregate means from independently summarized rows.
-    """
+    """Paired seed-wise deltas between one method and a reference method."""
 
     scenario: str
     method: str
@@ -108,6 +124,12 @@ class PairedMethodComparison:
     se_delta_gospa_false_cost: float
     mean_delta_gospa_missed_cost: float
     se_delta_gospa_missed_cost: float
+    mean_delta_merged_gospa_distance: float
+    se_delta_merged_gospa_distance: float
+    mean_delta_merged_gospa_false_cost: float
+    se_delta_merged_gospa_false_cost: float
+    mean_delta_merged_gospa_missed_cost: float
+    se_delta_merged_gospa_missed_cost: float
 
     def to_dict(self) -> dict[str, float | int | str]:
         return {
@@ -127,14 +149,17 @@ class PairedMethodComparison:
             "se_delta_gospa_false_cost": self.se_delta_gospa_false_cost,
             "mean_delta_gospa_missed_cost": self.mean_delta_gospa_missed_cost,
             "se_delta_gospa_missed_cost": self.se_delta_gospa_missed_cost,
+            "mean_delta_merged_gospa_distance": self.mean_delta_merged_gospa_distance,
+            "se_delta_merged_gospa_distance": self.se_delta_merged_gospa_distance,
+            "mean_delta_merged_gospa_false_cost": self.mean_delta_merged_gospa_false_cost,
+            "se_delta_merged_gospa_false_cost": self.se_delta_merged_gospa_false_cost,
+            "mean_delta_merged_gospa_missed_cost": self.mean_delta_merged_gospa_missed_cost,
+            "se_delta_merged_gospa_missed_cost": self.se_delta_merged_gospa_missed_cost,
         }
 
 
 def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAggregate, ...]:
-    """Aggregate method results across seeds by scenario and method.
-
-    The output is sorted by scenario and method for deterministic reporting.
-    """
+    """Aggregate method results across seeds by scenario and method."""
 
     by_group: dict[tuple[str, str], list[MethodResult]] = {}
     for result in results:
@@ -152,6 +177,9 @@ def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAgg
                 mean_true_confirmed_tracks=_mean_attr(method_results, "true_confirmed_tracks"),
                 mean_false_tracks=_mean_attr(method_results, "false_tracks"),
                 mean_false_track_duration=_mean_attr(method_results, "false_track_duration"),
+                mean_track_fragment_count=_mean_attr(method_results, "track_fragment_count"),
+                mean_fragments_per_confirmed_truth=_mean_attr(method_results, "mean_fragments_per_confirmed_truth"),
+                mean_merged_estimates=_mean_attr(method_results, "merged_estimates"),
                 mean_time_to_confirm=_mean_attr(method_results, "mean_time_to_confirm"),
                 mean_true_time_to_confirm=_mean_attr(method_results, "mean_true_time_to_confirm"),
                 mean_missed_targets=_mean_attr(method_results, "missed_targets"),
@@ -159,6 +187,10 @@ def aggregate_method_results(results: Sequence[MethodResult]) -> tuple[MethodAgg
                 mean_gospa_localization_cost=_mean_attr(method_results, "gospa_localization_cost"),
                 mean_gospa_missed_cost=_mean_attr(method_results, "gospa_missed_cost"),
                 mean_gospa_false_cost=_mean_attr(method_results, "gospa_false_cost"),
+                mean_merged_gospa_distance=_mean_attr(method_results, "merged_gospa_distance"),
+                mean_merged_gospa_localization_cost=_mean_attr(method_results, "merged_gospa_localization_cost"),
+                mean_merged_gospa_missed_cost=_mean_attr(method_results, "merged_gospa_missed_cost"),
+                mean_merged_gospa_false_cost=_mean_attr(method_results, "merged_gospa_false_cost"),
                 mean_posterior_expected_fdr=_mean_attr(method_results, "posterior_expected_fdr"),
                 mean_observed_false_discovery_proportion=_mean_attr(
                     method_results,
@@ -174,12 +206,7 @@ def compare_to_reference(
     aggregates: Sequence[MethodAggregate],
     reference_method: str = "oracle",
 ) -> tuple[MethodComparison, ...]:
-    """Compare method aggregates against a reference method within each scenario.
-
-    Positive deltas mean the method is worse than the reference on that metric;
-    negative deltas mean lower error than the reference. The reference row itself
-    is omitted from the returned comparisons.
-    """
+    """Compare method aggregates against a reference method within each scenario."""
 
     by_scenario_method = {(aggregate.scenario, aggregate.method): aggregate for aggregate in aggregates}
     comparisons: list[MethodComparison] = []
@@ -202,6 +229,15 @@ def compare_to_reference(
                 delta_mean_gospa_distance=aggregate.mean_gospa_distance - reference.mean_gospa_distance,
                 delta_mean_gospa_false_cost=aggregate.mean_gospa_false_cost - reference.mean_gospa_false_cost,
                 delta_mean_gospa_missed_cost=aggregate.mean_gospa_missed_cost - reference.mean_gospa_missed_cost,
+                delta_mean_merged_gospa_distance=(
+                    aggregate.mean_merged_gospa_distance - reference.mean_merged_gospa_distance
+                ),
+                delta_mean_merged_gospa_false_cost=(
+                    aggregate.mean_merged_gospa_false_cost - reference.mean_merged_gospa_false_cost
+                ),
+                delta_mean_merged_gospa_missed_cost=(
+                    aggregate.mean_merged_gospa_missed_cost - reference.mean_merged_gospa_missed_cost
+                ),
             )
         )
     return tuple(comparisons)
@@ -211,11 +247,7 @@ def compare_to_reference_paired(
     results: Sequence[MethodResult],
     reference_method: str = "oracle",
 ) -> tuple[PairedMethodComparison, ...]:
-    """Compute paired seed-wise method deltas against a reference method.
-
-    Only seeds for which both the method and reference method are present in the
-    same scenario are used. Positive deltas mean higher error than the reference.
-    """
+    """Compute paired seed-wise method deltas against a reference method."""
 
     by_key = {(result.scenario, result.method, result.seed): result for result in results}
     groups = sorted({(result.scenario, result.method) for result in results if result.method != reference_method})
@@ -240,6 +272,9 @@ def compare_to_reference_paired(
         gospa_distance = [row.gospa_distance - reference.gospa_distance for row, reference in pairs]
         gospa_false = [row.gospa_false_cost - reference.gospa_false_cost for row, reference in pairs]
         gospa_missed = [row.gospa_missed_cost - reference.gospa_missed_cost for row, reference in pairs]
+        merged_gospa_distance = [row.merged_gospa_distance - reference.merged_gospa_distance for row, reference in pairs]
+        merged_gospa_false = [row.merged_gospa_false_cost - reference.merged_gospa_false_cost for row, reference in pairs]
+        merged_gospa_missed = [row.merged_gospa_missed_cost - reference.merged_gospa_missed_cost for row, reference in pairs]
 
         comparisons.append(
             PairedMethodComparison(
@@ -259,6 +294,12 @@ def compare_to_reference_paired(
                 se_delta_gospa_false_cost=_standard_error(gospa_false),
                 mean_delta_gospa_missed_cost=_mean(gospa_missed),
                 se_delta_gospa_missed_cost=_standard_error(gospa_missed),
+                mean_delta_merged_gospa_distance=_mean(merged_gospa_distance),
+                se_delta_merged_gospa_distance=_standard_error(merged_gospa_distance),
+                mean_delta_merged_gospa_false_cost=_mean(merged_gospa_false),
+                se_delta_merged_gospa_false_cost=_standard_error(merged_gospa_false),
+                mean_delta_merged_gospa_missed_cost=_mean(merged_gospa_missed),
+                se_delta_merged_gospa_missed_cost=_standard_error(merged_gospa_missed),
             )
         )
     return tuple(comparisons)

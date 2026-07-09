@@ -27,6 +27,9 @@ def _result(
         true_confirmed_tracks=confirmed_tracks - false_tracks,
         false_tracks=false_tracks,
         false_track_duration=false_tracks * 3,
+        track_fragment_count=confirmed_tracks - false_tracks,
+        mean_fragments_per_confirmed_truth=1.0,
+        merged_estimates=confirmed_tracks,
         mean_time_to_confirm=3.0,
         mean_true_time_to_confirm=2.5,
         missed_targets=missed_targets,
@@ -35,6 +38,11 @@ def _result(
         gospa_localization_cost=0.5,
         gospa_missed_cost=float(missed_targets),
         gospa_false_cost=gospa_false_cost,
+        merged_gospa_distance=0.9,
+        merged_gospa_total_cost=1.5 + gospa_false_cost,
+        merged_gospa_localization_cost=0.4,
+        merged_gospa_missed_cost=float(missed_targets),
+        merged_gospa_false_cost=gospa_false_cost,
         posterior_expected_fdr=0.1,
         observed_false_discovery_proportion=0.25,
         existence_brier_score=0.05,
@@ -122,6 +130,8 @@ def test_format_method_csv_helpers_include_headers_and_rows():
     paired_comparison_csv = format_paired_method_comparisons_csv(paired_comparisons)
 
     assert raw_csv.startswith("scenario,method,seed,confirmed_tracks")
+    assert "track_fragment_count" in raw_csv
+    assert "merged_gospa_false_cost" in raw_csv
     assert "hotspot,dp,0," in raw_csv
     assert aggregate_csv.startswith("scenario,method,num_runs,mean_confirmed_tracks")
     assert "mean_true_time_to_confirm" in aggregate_csv

@@ -74,6 +74,12 @@ from .tracklet import (
     birth_vs_clutter_log_bayes_factor,
     tracklet_truth_labels,
 )
+from .tracklet_merge import (
+    MergedTracklet,
+    fragmentation_counts_by_truth,
+    mean_fragments_per_confirmed_truth,
+    merge_confirmed_tracklets,
+)
 
 __all__ = [
     "AssociationResult",
@@ -90,6 +96,7 @@ __all__ = [
     "GridClutterIntensity",
     "LinearTarget",
     "MeasurementModel",
+    "MergedTracklet",
     "MethodAggregate",
     "MethodComparison",
     "MethodResult",
@@ -121,10 +128,13 @@ __all__ = [
     "format_method_comparisons_csv",
     "format_method_results_csv",
     "format_paired_method_comparisons_csv",
+    "fragmentation_counts_by_truth",
     "gaussian_logpdf",
     "gospa_decomposition",
     "hotspot_scenario",
     "make_scenario",
+    "mean_fragments_per_confirmed_truth",
+    "merge_confirmed_tracklets",
     "near_hotspot_crossing_scenario",
     "no_hotspot_control_scenario",
     "posterior_existence_from_log_bayes_factor",

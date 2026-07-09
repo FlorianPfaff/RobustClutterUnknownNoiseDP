@@ -43,8 +43,11 @@ def summarize(summary_rows: list[dict[str, str]]) -> str:
         "method",
         "mean_false_tracks",
         "mean_gospa_false_cost",
+        "mean_merged_gospa_false_cost",
         "mean_missed_targets",
         "mean_gospa_distance",
+        "mean_merged_gospa_distance",
+        "mean_fragments_per_confirmed_truth",
     ]
     return format_table(summary_rows, columns)
 
