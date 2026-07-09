@@ -14,6 +14,7 @@ from .scenarios import make_scenario
 from .scoring import BirthModel, MeasurementModel, compete_measurement
 from .simulation import SimulationConfig, SimulationRun, StructuredClutterIntensity, simulate_structured_clutter_scene
 from .tracklet import TentativeBirthManager, TentativeTracklet, TrackletManagerConfig, tracklet_truth_labels
+from .tracklet_merge import merge_confirmed_tracklets, mean_fragments_per_confirmed_truth
 
 
 SUPPORTED_METHODS = ("uniform", "grid", "dp", "oracle")
@@ -73,6 +74,9 @@ class MethodResult:
     true_confirmed_tracks: int
     false_tracks: int
     false_track_duration: int
+    track_fragment_count: int
+    mean_fragments_per_confirmed_truth: float
+    merged_estimates: int
     mean_time_to_confirm: float
     mean_true_time_to_confirm: float
     missed_targets: int
@@ -81,6 +85,11 @@ class MethodResult:
     gospa_localization_cost: float
     gospa_missed_cost: float
     gospa_false_cost: float
+    merged_gospa_distance: float
+    merged_gospa_total_cost: float
+    merged_gospa_localization_cost: float
+    merged_gospa_missed_cost: float
+    merged_gospa_false_cost: float
     posterior_expected_fdr: float
     observed_false_discovery_proportion: float
     existence_brier_score: float
@@ -96,6 +105,9 @@ class MethodResult:
             "true_confirmed_tracks": self.true_confirmed_tracks,
             "false_tracks": self.false_tracks,
             "false_track_duration": self.false_track_duration,
+            "track_fragment_count": self.track_fragment_count,
+            "mean_fragments_per_confirmed_truth": self.mean_fragments_per_confirmed_truth,
+            "merged_estimates": self.merged_estimates,
             "mean_time_to_confirm": self.mean_time_to_confirm,
             "mean_true_time_to_confirm": self.mean_true_time_to_confirm,
             "missed_targets": self.missed_targets,
@@ -104,6 +116,11 @@ class MethodResult:
             "gospa_localization_cost": self.gospa_localization_cost,
             "gospa_missed_cost": self.gospa_missed_cost,
             "gospa_false_cost": self.gospa_false_cost,
+            "merged_gospa_distance": self.merged_gospa_distance,
+            "merged_gospa_total_cost": self.merged_gospa_total_cost,
+            "merged_gospa_localization_cost": self.merged_gospa_localization_cost,
+            "merged_gospa_missed_cost": self.merged_gospa_missed_cost,
+            "merged_gospa_false_cost": self.merged_gospa_false_cost,
             "posterior_expected_fdr": self.posterior_expected_fdr,
             "observed_false_discovery_proportion": self.observed_false_discovery_proportion,
             "existence_brier_score": self.existence_brier_score,
@@ -265,15 +282,13 @@ def summarize_method_result(
     ]
     confirmation = confirmation_metrics(records)
 
-    estimates = [
-        PointObject(tracklet.candidate_id, tracklet.last_position)
-        for tracklet in confirmed
-    ]
-    truths = [
-        PointObject(truth.target_id, truth.position)
-        for truth in final_truths
-    ]
+    estimates = [PointObject(tracklet.candidate_id, tracklet.last_position) for tracklet in confirmed]
+    truths = [PointObject(truth.target_id, truth.position) for truth in final_truths]
     gospa = gospa_decomposition(estimates, truths, cutoff=gospa_cutoff)
+
+    merged_tracklets = merge_confirmed_tracklets(confirmed)
+    merged_estimates = [PointObject(group.group_id, group.last_position) for group in merged_tracklets]
+    merged_gospa = gospa_decomposition(merged_estimates, truths, cutoff=gospa_cutoff)
 
     true_tracklets = [tracklet for tracklet in confirmed if truth_labels[tracklet.candidate_id]]
     false_tracklets = [tracklet for tracklet in confirmed if not truth_labels[tracklet.candidate_id]]
@@ -285,6 +300,9 @@ def summarize_method_result(
         true_confirmed_tracks=len(true_tracklets),
         false_tracks=len(false_tracklets),
         false_track_duration=sum(tracklet.duration for tracklet in false_tracklets),
+        track_fragment_count=len(true_tracklets),
+        mean_fragments_per_confirmed_truth=mean_fragments_per_confirmed_truth(confirmed),
+        merged_estimates=len(merged_tracklets),
         mean_time_to_confirm=_mean_duration(confirmed),
         mean_true_time_to_confirm=_mean_duration(true_tracklets),
         missed_targets=gospa.num_missed,
@@ -293,6 +311,11 @@ def summarize_method_result(
         gospa_localization_cost=gospa.localization_cost,
         gospa_missed_cost=gospa.missed_cost,
         gospa_false_cost=gospa.false_cost,
+        merged_gospa_distance=merged_gospa.distance,
+        merged_gospa_total_cost=merged_gospa.total_cost,
+        merged_gospa_localization_cost=merged_gospa.localization_cost,
+        merged_gospa_missed_cost=merged_gospa.missed_cost,
+        merged_gospa_false_cost=merged_gospa.false_cost,
         posterior_expected_fdr=confirmation.posterior_expected_fdr,
         observed_false_discovery_proportion=confirmation.false_discovery_proportion,
         existence_brier_score=confirmation.brier_score,
