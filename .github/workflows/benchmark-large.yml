@@ -1,6 +1,6 @@
 name: benchmark-large
 
-# Touch this workflow to trigger a hosted large benchmark run on main.
+# Touch this workflow to trigger a hosted large benchmark run on main after fragmentation diagnostics.
 on:
   workflow_dispatch:
     inputs:
